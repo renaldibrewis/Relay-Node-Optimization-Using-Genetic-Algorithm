@@ -1,0 +1,47 @@
+import copy
+import Chromosome as chro
+import math
+import random
+
+
+class Population:
+    def __init__(self, Psize, Cr, Mr, xIGw, yIGw, RadIGw, numRelay, xMax, yMax, Rad):
+        self.popsize = Psize
+        self.cr = Cr
+        self.mr = Mr
+        self.pop = []
+    
+        for i in range(0, self.popsize):
+            self.pop.append(chro.Chromosome.generateRandom(xIGw,yIGw,RadIGw,numRelay,xMax,yMax,Rad))
+        self.pop = self.sorting(copy.deepcopy(self.pop))
+        
+        
+    def sorting(self, data):
+        for i in range(len(data)):
+            for j in range(i+1,len(data)):
+                if (data[i].fitness < data[j].fitness):
+                    data[i],data[j]=copy.deepcopy(data[j]),copy.deepcopy(data[i])
+        return data
+
+    def evolve(self):
+        descendant = []
+        cros = math.floor((self.cr * self.popsize) / 2)
+        muta = math.floor(self.mr * self.popsize)
+        i = 0
+        while i < cros:
+            par1 = random.randint(0, self.popsize - 1)
+            par2 = par1
+            while par1 == par2:
+                par2 = random.randint(0, self.popsize - 1)
+            
+            #print("posisi parent",par1,par2)
+            kid = self.pop[par1].mate(self.pop[par2])
+            descendant.append(kid[0])
+            descendant.append(kid[1])
+            i += 1
+        i = 0
+        while i < muta:
+            descendant.append(self.pop[random.randint(0, self.popsize - 1)].mutate())
+            i += 1
+        descendant += self.pop[:]
+        self.pop = sorted(descendant, key=lambda x: x.fitness, reverse=True)[:self.popsize]
