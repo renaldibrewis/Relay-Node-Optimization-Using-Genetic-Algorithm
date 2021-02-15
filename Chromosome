@@ -1,0 +1,164 @@
+import copy
+import random
+from itertools import chain
+import math
+
+
+
+class Chromosome:
+    #fix
+    #rad adalah jari jari
+    def __init__(self,xIGw, yIGw ,RadIGw, gen, xMax, yMax, Rad):
+        self.xIGw=xIGw
+        self.yIGw=yIGw
+        self.radIGw=RadIGw
+        self.gene = gen
+        self.xmax = xMax
+        self.ymax = yMax
+        self.rad=Rad
+        self.fitness1=0
+        self.fitness2=0
+        self.fitness = self.calcfit()
+        print(self.gene)
+       
+    
+        
+    def euclid(self, x, y):
+        return math.sqrt(((x[0]-y[0])*(x[0]-y[0]))+((x[1]-y[1])*(x[1]-y[1])))
+        
+        
+    def calcfit(self):
+        fitness=0
+        fitness_1=0
+        fitness_1_count=0
+        #mencatat sambungan node
+        #-1 berarti tidak terkoneksi dengan IGw
+        #n bernilai sesuai tier yang tersambung 0=IGw
+        #print("ketik",self.gene)
+        before=[-2 for i in range(int(len(self.gene)/2))]
+        after=[i for i in range(int(len(self.gene)/2))]
+        #untuk mencatat index
+        notTaken=[i for i in range(int(len(self.gene)/2))]
+        #variable untuk menyimpan tier dengan indeks
+        tier=[[] for i in range(int(len(self.gene)/2))]
+        # i adalah index tier
+        for i in range(int(len(self.gene)/2)):
+            if(i==0):
+                #j adalah index relay                
+                for j in range(int(len(self.gene)/2)):
+                    S=self.euclid([self.xIGw,self.yIGw],self.gene[j*2:(j*2)+2])
+                    if(S<=self.radIGw):
+                        before[j]=-1
+                        tier[i].append(j)
+                        notTaken.remove(j)
+                        fitness+=S/self.radIGw
+                        
+                print("belum diambil",notTaken)
+                print("tier yang terisi",tier)
+            else:
+                #tier setelahnya masih masalah
+                for posj,j in enumerate(notTaken):
+                    terdekat=-1
+                    indterdekat=-1
+                    print("tier sekarang adalah",i)
+                    jarak=[self.euclid(self.gene[j*2:(j*2)+2],self.gene[k*2:(k*2)+2]) for k in tier[i-1]]
+                    
+                    print(jarak)
+                    for k in range(len(jarak)):
+                        if(terdekat<jarak[k]<=self.rad):
+                            terdekat=jarak[k]
+                            indterdekat=k
+                    #print(terdekat,indterdekat)
+                    if(terdekat!=-1):
+                        #print("masuk masuk")
+                        before[j]=tier[i-1][indterdekat]
+                        tier[i].append(notTaken[posj])
+                        notTaken.remove(notTaken[posj])
+                        fitness+=terdekat/self.rad
+                if not tier[i]:
+                    break
+                    #print("kosong")
+        #print("fitness ",fitness)
+        #print(before)
+        #print(after)
+        #print(tier)
+        for i in range(len(tier)):
+            for j in range(len(tier[i])):
+                if (j<(len(tier[i])-1)):
+                    for k in range(j+1,len(tier[i])):
+                        fitness_1_count+=1
+                        if (self.euclid(self.gene[tier[i][j]*2:(tier[i][j]*2)+2],self.gene[tier[i][k]*2:(tier[i][k]*2)+2])>(0.8*self.rad)):
+                            fitness_1+=1
+            print(tier[i],len(tier[i]))
+            print("tier ke",i,fitness_1,fitness_1_count)
+        if fitness_1_count==0:
+            fitness_1_count=1
+        print("fitness kedua",fitness_1,fitness_1_count)
+        self.fitness1=fitness/(len(self.gene)/2)
+        self.fitness2=(fitness_1/fitness_1_count)
+        
+        return (fitness/(len(self.gene)/2))+(fitness_1/fitness_1_count)
+    
+    def mutate(self):
+        childgene=copy.deepcopy(self.gene)
+        for i in range(len(childgene)):
+            if(i%2==0):
+                childgene[i]= childgene[i]+(random.random()*self.xmax)
+                if(childgene[i]>self.xmax):
+                    number=childgene[i]//self.xmax
+                    if(childgene[i]%self.xmax==0):
+                        number-=1
+                    childgene[i]-=self.xmax*number
+                    
+            elif(i%2==1):
+                childgene[i]= childgene[i]+(random.random()*self.ymax)
+                if(childgene[i]>self.ymax):
+                    number=childgene[i]//self.ymax
+                    if(childgene[i]%self.ymax==0):
+                        number-=1
+                    childgene[i]-=self.ymax*number
+            childgene[i]=round(childgene[i],2)
+        #print("hasil mutasi",childgene)
+        return Chromosome(self.xIGw,self.yIGw,self.radIGw,childgene,self.xmax,self.ymax,self.rad)
+    
+    # fix
+    #uniform crossover
+    def mate(self, partner):
+        childgene1=copy.deepcopy(self.gene)
+        childgene2=copy.deepcopy(partner.gene)
+        for i in range(len(childgene1)):
+            childgene1[i]=round(childgene1[i]+(random.random()*(childgene2[i]-childgene1[i])),2)
+            childgene2[i]=round(childgene2[i]+(random.random()*(childgene1[i]-childgene2[i])),2)
+            if(i%2==0):
+                if(childgene1[i]>self.xmax):
+                    number=childgene1[i]//self.xmax
+                    if(childgene1[i]%self.xmax==0):
+                        number-=1
+                    childgene1[i]-=(self.xmax*number)
+                if(childgene2[i]>self.xmax):
+                    number=childgene2[i]//self.xmax
+                    if(childgene2[i]%self.xmax==0):
+                        number-=1
+                    childgene2[i]-=self.xmax*number
+            elif(i%2==1):
+                if(childgene1[i]>self.ymax):
+                    number=childgene1[i]//self.ymax
+                    if(childgene1[i]%self.ymax==0):
+                        number-=1
+                    childgene1[i]-=self.ymax*number
+                if(childgene2[i]>self.ymax):
+                    number=childgene2[i]//self.ymax
+                    if(childgene2[i]%self.ymax==0):
+                        number-=1
+                    childgene2[i]-=self.ymax*number
+        #print("hasil xover",childgene1,childgene2)
+        return Chromosome(self.xIGw,self.yIGw,self.radIGw,childgene1,self.xmax,self.ymax,self.rad), Chromosome(self.xIGw,self.yIGw,self.radIGw,childgene2,self.xmax,self.ymax,self.rad)
+   
+        
+    @staticmethod
+    def generateRandom(xIGw,yIGw,RadIGw,numRelay,xMax,yMax,Rad):
+        f = lambda x: random.randint(0,xMax)
+        g = lambda x: random.randint(0,yMax)
+        gene=list(chain.from_iterable((f(x), g(x)) for x in range(numRelay)))
+
+        return Chromosome(xIGw,yIGw,RadIGw,copy.deepcopy(gene),xMax,yMax,Rad)
